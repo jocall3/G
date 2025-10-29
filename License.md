@@ -1,6 +1,6 @@
 ---
-license: apache-2.0
-license_name: citibankdemobusiness
+license: citibankdemobusiness-2.0
+license_name: citibankdemobusiness-2.0
 license_link: LICENSE
 ---
 # Combined contents of folder: contracts
