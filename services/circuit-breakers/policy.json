@@ -1,0 +1,73 @@
+{
+  "covenantVersion": "74.0.1",
+  "description": "Circuit Breaker policies for inter-service communication, adhering to Covenant 74 resilience standards. These policies define how services react to failures and slow responses from dependencies, ensuring system stability and graceful degradation.",
+  "defaultCircuitBreakerPolicy": {
+    "failureRateThreshold": 50,
+    "slowCallRateThreshold": 100,
+    "waitDurationInOpenState": "30s",
+    "permittedNumberOfCallsInHalfOpenState": 10,
+    "slidingWindowType": "COUNT_BASED",
+    "slidingWindowSize": 100,
+    "minimumNumberOfCalls": 10,
+    "callTimeoutDuration": "5s",
+    "maxWaitDurationInHalfOpenState": "5s"
+  },
+  "serviceSpecificPolicies": [
+    {
+      "serviceIdentifier": "ai-banking-core",
+      "config": {
+        "failureRateThreshold": 60,
+        "slowCallRateThreshold": 90,
+        "waitDurationInOpenState": "60s",
+        "permittedNumberOfCallsInHalfOpenState": 5,
+        "slidingWindowType": "TIME_BASED",
+        "slidingWindowSize": "60s",
+        "minimumNumberOfCalls": 20,
+        "callTimeoutDuration": "10s",
+        "maxWaitDurationInHalfOpenState": "10s"
+      }
+    },
+    {
+      "serviceIdentifier": "license-validation-service",
+      "config": {
+        "failureRateThreshold": 70,
+        "slowCallRateThreshold": 100,
+        "waitDurationInOpenState": "120s",
+        "permittedNumberOfCallsInHalfOpenState": 3,
+        "slidingWindowType": "COUNT_BASED",
+        "slidingWindowSize": 50,
+        "minimumNumberOfCalls": 5,
+        "callTimeoutDuration": "15s",
+        "maxWaitDurationInHalfOpenState": "15s"
+      }
+    },
+    {
+      "serviceIdentifier": "user-profile-service",
+      "config": {
+        "failureRateThreshold": 40,
+        "slowCallRateThreshold": 80,
+        "waitDurationInOpenState": "20s",
+        "permittedNumberOfCallsInHalfOpenState": 15,
+        "slidingWindowType": "TIME_BASED",
+        "slidingWindowSize": "30s",
+        "minimumNumberOfCalls": 15,
+        "callTimeoutDuration": "3s",
+        "maxWaitDurationInHalfOpenState": "3s"
+      }
+    },
+    {
+      "serviceIdentifier": "transaction-processing",
+      "config": {
+        "failureRateThreshold": 55,
+        "slowCallRateThreshold": 95,
+        "waitDurationInOpenState": "45s",
+        "permittedNumberOfCallsInHalfOpenState": 8,
+        "slidingWindowType": "COUNT_BASED",
+        "slidingWindowSize": 120,
+        "minimumNumberOfCalls": 15,
+        "callTimeoutDuration": "7s",
+        "maxWaitDurationInHalfOpenState": "7s"
+      }
+    }
+  ]
+}
