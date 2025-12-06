@@ -1,0 +1,330 @@
+/*
+ * apps/chronicle-ui/src/styles/globals.css
+ *
+ * Global CSS file defining base styles and accessibility improvements,
+ * ensuring the Accessibility Mandate (Covenant 49) is met.
+ */
+
+/* --- 1. CSS Reset / Normalization --- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%; /* Prevent text resizing on iOS */
+  font-family: var(--font-primary, sans-serif);
+  scroll-behavior: smooth; /* Smooth scrolling for anchor links */
+}
+
+body {
+  min-height: 100vh;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--color-background-primary);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-base);
+}
+
+/* Remove default margin for common elements */
+body,
+h1, h2, h3, h4, h5, h6,
+p, blockquote, figure, hr,
+ul, ol, dl, dd {
+  margin: 0;
+}
+
+/* Set core root defaults */
+html:focus-within {
+  scroll-behavior: smooth;
+}
+
+/* Make images easier to work with */
+img, picture, video, canvas, svg {
+  display: block;
+  max-width: 100%;
+}
+
+/* Inherit fonts for form elements */
+input, button, textarea, select {
+  font: inherit;
+}
+
+/* Remove all animations, transitions and scroll-behavior for people that prefer not to see them */
+@media (prefers-reduced-motion: reduce) {
+  html:focus-within {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* --- 2. CSS Variables (Design Tokens) --- */
+:root {
+  /* Colors */
+  --color-primary: #007bff; /* Blue */
+  --color-secondary: #6c757d; /* Gray */
+  --color-accent: #28a745; /* Green */
+  --color-danger: #dc3545; /* Red */
+  --color-warning: #ffc107; /* Yellow */
+  --color-info: #17a2b8; /* Cyan */
+
+  --color-background-primary: #ffffff;
+  --color-background-secondary: #f8f9fa;
+  --color-background-tertiary: #e9ecef;
+  --color-background-dark: #343a40;
+
+  --color-text-primary: #212529;
+  --color-text-secondary: #495057;
+  --color-text-light: #f8f9fa;
+  --color-text-link: var(--color-primary);
+
+  --color-border-light: #dee2e6;
+  --color-border-dark: #adb5bd;
+
+  /* Dark Mode (example - typically handled by a theme toggle or media query) */
+  @media (prefers-color-scheme: dark) {
+    --color-background-primary: #1a1a1a;
+    --color-background-secondary: #2c2c2c;
+    --color-background-tertiary: #3a3a3a;
+    --color-background-dark: #000000;
+
+    --color-text-primary: #e0e0e0;
+    --color-text-secondary: #b0b0b0;
+    --color-text-light: #ffffff;
+    --color-text-link: #8ab4f8; /* Lighter blue for dark mode */
+
+    --color-border-light: #444444;
+    --color-border-dark: #666666;
+  }
+
+  /* Typography */
+  --font-primary: 'Inter', sans-serif; /* Example font */
+  --font-secondary: 'Roboto Mono', monospace; /* Example font for code */
+
+  --font-size-base: 1rem; /* 16px */
+  --font-size-sm: 0.875rem; /* 14px */
+  --font-size-lg: 1.125rem; /* 18px */
+  --font-size-xl: 1.25rem; /* 20px */
+  --font-size-2xl: 1.5rem; /* 24px */
+  --font-size-3xl: 1.875rem; /* 30px */
+  --font-size-4xl: 2.25rem; /* 36px */
+
+  --font-weight-light: 300;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --line-height-base: 1.5;
+  --line-height-heading: 1.2;
+
+  /* Spacing */
+  --spacing-xs: 0.25rem; /* 4px */
+  --spacing-sm: 0.5rem; /* 8px */
+  --spacing-md: 1rem; /* 16px */
+  --spacing-lg: 1.5rem; /* 24px */
+  --spacing-xl: 2rem; /* 32px */
+  --spacing-2xl: 3rem; /* 48px */
+
+  /* Border Radius */
+  --border-radius-sm: 0.25rem;
+  --border-radius-md: 0.5rem;
+  --border-radius-lg: 0.75rem;
+  --border-radius-full: 9999px;
+
+  /* Box Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* --- 3. Base Typography & Headings --- */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-primary);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--line-height-heading);
+  color: var(--color-text-primary);
+  margin-top: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+}
+
+h1 { font-size: var(--font-size-4xl); }
+h2 { font-size: var(--font-size-3xl); }
+h3 { font-size: var(--font-size-2xl); }
+h4 { font-size: var(--font-size-xl); }
+h5 { font-size: var(--font-size-lg); }
+h6 { font-size: var(--font-size-base); }
+
+p {
+  margin-bottom: var(--spacing-md);
+}
+
+a {
+  color: var(--color-text-link);
+  text-decoration: none;
+  transition: color 0.2s ease-in-out;
+}
+
+a:hover {
+  color: var(--color-primary); /* Darker/lighter shade on hover */
+  text-decoration: underline;
+}
+
+/* --- 4. Accessibility Improvements (Covenant 49) --- */
+
+/* Focus Styles: Ensure clear visual indication for keyboard navigation */
+:focus-visible {
+  outline: 3px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: var(--border-radius-sm); /* Match element's border-radius if possible */
+}
+
+/* Remove default outline for mouse users, but keep for keyboard users */
+*:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Skip Link: For screen reader and keyboard users to bypass repetitive content */
+.skip-link {
+  position: absolute;
+  top: -9999px;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  z-index: 9999; /* Ensure it's on top */
+  background-color: var(--color-background-primary);
+  color: var(--color-text-primary);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--color-border-dark);
+  border-radius: var(--border-radius-md);
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  top: var(--spacing-md);
+  left: var(--spacing-md);
+  width: auto;
+  height: auto;
+  outline: none; /* Focus-visible will handle the outline */
+}
+
+/* Visually Hidden (sr-only): For screen readers only */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* High Contrast Mode (Windows High Contrast Mode) */
+@media screen and (-ms-high-contrast: active), (-ms-high-contrast: black-on-white), (-ms-high-contrast: white-on-black) {
+  /* Ensure sufficient contrast for text and interactive elements */
+  body {
+    background: Window !important;
+    color: WindowText !important;
+  }
+  a {
+    color: LinkText !important;
+    border: 1px solid transparent; /* Add a border for focus visibility */
+  }
+  a:hover {
+    background: Highlight !important;
+    color: HighlightText !important;
+  }
+  button {
+    background: ButtonFace !important;
+    color: ButtonText !important;
+    border-color: ButtonText !important;
+  }
+  button:hover {
+    background: Highlight !important;
+    color: HighlightText !important;
+  }
+  :focus-visible {
+    outline: 3px solid Highlight !important;
+    outline-offset: 2px;
+  }
+}
+
+/* Responsive Typography (example - adjust breakpoints as needed) */
+@media (min-width: 768px) {
+  :root {
+    --font-size-base: 1.0625rem; /* 17px */
+    --font-size-lg: 1.25rem; /* 20px */
+    --font-size-xl: 1.5rem; /* 24px */
+    --font-size-2xl: 1.875rem; /* 30px */
+    --font-size-3xl: 2.25rem; /* 36px */
+    --font-size-4xl: 2.75rem; /* 44px */
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --font-size-base: 1.125rem; /* 18px */
+    --font-size-lg: 1.375rem; /* 22px */
+    --font-size-xl: 1.625rem; /* 26px */
+    --font-size-2xl: 2rem; /* 32px */
+    --font-size-3xl: 2.5rem; /* 40px */
+    --font-size-4xl: 3rem; /* 48px */
+  }
+}
+
+/* --- 5. Utility Classes (Optional, but often useful) --- */
+.container {
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--spacing-md);
+  padding-right: var(--spacing-md);
+}
+
+.text-center { text-align: center; }
+.text-left { text-align: left; }
+.text-right { text-align: right; }
+
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-center { justify-content: center; }
+.justify-between { justify-content: space-between; }
+.gap-sm { gap: var(--spacing-sm); }
+.gap-md { gap: var(--spacing-md); }
+.gap-lg { gap: var(--spacing-lg); }
+
+.m-0 { margin: 0 !important; }
+.mt-md { margin-top: var(--spacing-md); }
+.mb-md { margin-bottom: var(--spacing-md); }
+.ml-md { margin-left: var(--spacing-md); }
+.mr-md { margin-right: var(--spacing-md); }
+
+.p-0 { padding: 0 !important; }
+.pt-md { padding-top: var(--spacing-md); }
+.pb-md { padding-bottom: var(--spacing-md); }
+.pl-md { padding-left: var(--spacing-md); }
+.pr-md { padding-right: var(--spacing-md); }
+
+/* --- 6. Custom Fonts (Import example) --- */
+/*
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;700&display=swap');
+*/
+/* If using Next.js with @next/font, this import would be handled differently in _app.tsx or layout.tsx */
