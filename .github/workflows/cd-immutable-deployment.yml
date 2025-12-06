@@ -1,0 +1,86 @@
+# .github/workflows/cd-immutable-deployment.yml
+# Covenant 38: Immutable Deployment
+# This Continuous Deployment pipeline is triggered upon the publication of a new release.
+# It deploys a versioned container artifact to a Kubernetes cluster by updating the
+# deployment manifest, which causes the orchestrator to replace old pods with new ones.
+# This ensures deployments are immutable; we never patch running instances.
+
+name: CD - Immutable Deployment (Covenant 38)
+
+on:
+  release:
+    types: [published]
+
+env:
+  # === Configuration: Update these variables for your environment ===
+  AWS_REGION: "us-east-1" # e.g., us-west-2
+  EKS_CLUSTER_NAME: "infiniteai-production" # Your EKS cluster name
+  EKS_ROLE_ARN: "arn:aws:iam::123456789012:role/GitHubActions-EKS-DeployRole" # IAM role for GitHub Actions
+  ECR_REPOSITORY: "infiniteai-banking-app" # Your ECR repository name
+  K8S_DEPLOYMENT_NAME: "infiniteai-banking-app" # The name of the Kubernetes Deployment resource
+  K8S_NAMESPACE: "production" # The Kubernetes namespace to deploy into
+  K8S_MANIFEST_PATH: "k8s/production" # Path to the directory containing kustomization.yaml for production
+
+jobs:
+  deploy:
+    name: Deploy to Production Cluster
+    runs-on: ubuntu-latest
+    environment: production
+
+    # Use OpenID Connect for secure, keyless authentication to AWS
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.EKS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Set up kubectl
+        uses: aws-actions/configure-aws-credentials@v4 # Re-use to get credentials for EKS
+        with:
+          role-to-assume: ${{ env.EKS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - run: |
+          aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ env.AWS_REGION }}
+          echo "KUBECONFIG_PATH=${HOME}/.kube/config" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Set up Kustomize
+        run: |
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"  | bash
+          sudo mv kustomize /usr/local/bin/
+        shell: bash
+
+      - name: Get Version Tag from Release
+        id: get_version
+        # Extracts the version number from the Git tag (e.g., v1.2.3 -> 1.2.3)
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Update Kubernetes Manifest with New Image Tag
+        working-directory: ${{ env.K8S_MANIFEST_PATH }}
+        run: |
+          # The image name is constructed from the AWS Account ID, region, ECR repo, and the new version tag.
+          # This command declaratively updates the kustomization.yaml to use the new image.
+          AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          IMAGE_URI="${AWS_ACCOUNT_ID}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:${{ steps.get_version.outputs.VERSION }}"
+          echo "Updating deployment to use image: ${IMAGE_URI}"
+          kustomize edit set image ${{ env.ECR_REPOSITORY }}=${IMAGE_URI}
+
+      - name: Deploy to EKS Cluster
+        run: |
+          echo "Applying Kubernetes manifests from ${{ env.K8S_MANIFEST_PATH }}"
+          kubectl apply -k ${{ env.K8S_MANIFEST_PATH }}
+          echo "Manifests applied."
+
+      - name: Verify Deployment Rollout
+        run: |
+          echo "Waiting for deployment rollout to complete..."
+          kubectl rollout status deployment/${{ env.K8S_DEPLOYMENT_NAME }} --namespace ${{ env.K8S_NAMESPACE }} --timeout=5m
+          echo "Deployment successful!"
