@@ -1,0 +1,166 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: istio-system
+  labels:
+    istio-injection: disabled # Disable injection for the control plane itself
+---
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+metadata:
+  namespace: istio-system
+  name: istio-control-plane
+spec:
+  profile: default # Or choose a profile that suits your needs (e.g., minimal, demo)
+  components:
+    pilot:
+      enabled: true
+    ingressGateways:
+      - name: istio-ingressgateway
+        enabled: true
+        k8s:
+          service:
+            type: LoadBalancer # Or NodePort, ClusterIP depending on your environment
+  values:
+    global:
+      meshID: "mesh1" # Unique identifier for this service mesh
+      multiCluster:
+        clusterName: "cluster1" # Name of this Kubernetes cluster
+      network: "network1" # Name of the network this cluster belongs to
+      caAddress: "istiod.istio-system.svc.cluster.local:853" # Address of the CA for certificate issuance
+      caSecret: "" # Optional: Secret containing CA certificates if not using Istiod's CA
+      # Enable mTLS for all services by default
+      mtls:
+        enabled: true
+    meshConfig:
+      accessLogFile: /dev/stdout # Log access to stdout for easier debugging
+      defaultConfig:
+        # Enforce strict mTLS for all services
+        mtls:
+          mode: STRICT
+        # Enable tracing for all services
+        tracing:
+          zipkin:
+            address: "zipkin.istio-system.svc.cluster.local:9411" # Replace with your tracing backend
+        # Enable SDS for certificate distribution
+        sds:
+          tokenVolume: "/var/run/secrets/tokens"
+          certVolume: "/etc/istio/certs"
+          certDir: "/etc/istio/certs"
+      # Enable authorization policies by default
+      defaultAuthorizationPolicy:
+        allow: {} # Default to allow, then use explicit deny policies
+      # Enable identity for all services
+      identityContext:
+        # Use Kubernetes service account as identity
+        type: Kubernetes
+      # Enable certificate rotation
+      certificates:
+        rotationGracePeriod: 30s
+        maxStale: 24h
+      # Enable control plane logging
+      logging:
+        level: INFO
+      # Enable telemetry for all services
+      telemetry:
+        enabled: true
+        providers:
+          - name: "prometheus"
+            prometheus:
+              url: "http://prometheus.istio-system.svc.cluster.local:9090" # Replace with your Prometheus instance
+  # Apply default authorization policies for Zero Trust
+  # Covenant 36: Programmatically enforce Zero Trust Mandate
+  # This section defines default policies that will be applied to all services
+  # unless overridden by more specific policies.
+  # The goal is to deny all traffic by default and explicitly allow what's needed.
+  # For a true Zero Trust implementation, you'd typically start with a deny-all
+  # policy and then create specific allow policies for each service interaction.
+  # The 'defaultAuthorizationPolicy' above sets the mesh-wide default to allow,
+  # which is a common starting point for gradual adoption.
+  # For a strict Zero Trust, you would remove the 'allow: {}' from defaultConfig
+  # and implement explicit deny-all policies here or in separate AuthorizationPolicy resources.
+  # Example of a deny-all policy (commented out for gradual adoption):
+  # authorizationPolicies:
+  #   - name: deny-all
+  #     namespace: istio-system
+  #     spec:
+  #       selector: {} # Apply to all workloads in the mesh
+  #       action: DENY
+  #       rules:
+  #         - {} # Deny all requests
+---
+# Example of a basic AuthorizationPolicy to demonstrate explicit allow
+# This would typically be managed separately and applied to specific services.
+# For the purpose of this file, we'll include a placeholder to illustrate
+# how explicit allowances are made, which is key to Zero Trust.
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-ingress-to-frontend
+  namespace: default # Assuming your frontend service is in the 'default' namespace
+spec:
+  selector:
+    matchLabels:
+      app: frontend # Label for your frontend service
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/istio-system/sa/istio-ingressgateway-service-account"] # Allow traffic from the ingress gateway
+      to:
+        - operation:
+            methods: ["GET", "POST"] # Allow specific HTTP methods
+            paths:
+              - prefix: "/"
+---
+# Example of a service that would be managed by the service mesh
+# This is a placeholder and would typically be defined in its own deployment/service files.
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: my-service
+#   namespace: default
+#   labels:
+#     app: my-service
+# spec:
+#   selector:
+#     app: my-service
+#   ports:
+#     - protocol: TCP
+#       port: 8080
+#       targetPort: 8080
+# ---
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: my-service-deployment
+#   namespace: default
+# spec:
+#   replicas: 1
+#   selector:
+#     matchLabels:
+#       app: my-service
+#   template:
+#     metadata:
+#       labels:
+#         app: my-service
+#     spec:
+#       containers:
+#         - name: my-service
+#           image: <your-service-image>
+#           ports:
+#             - containerPort: 8080
+# ---
+# Note: For Istio to manage mTLS and authorization, the sidecar proxy
+# needs to be injected into the pods of your services. This is typically
+# done via a mutating webhook configuration in Istio's installation,
+# or by manually applying the sidecar configuration.
+# The 'istio-injection: enabled' label on a namespace will automatically
+# inject the sidecar.
+# Example:
+# apiVersion: v1
+# kind: Namespace
+# metadata:
+#   name: my-app-namespace
+#   labels:
+#     istio-injection: enabled
