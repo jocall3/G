@@ -1,0 +1,240 @@
+version: '3.8'
+
+services:
+  # --- Databases ---
+  user-db:
+    image: postgres:13.10-alpine
+    environment:
+      POSTGRES_DB: user_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    volumes:
+      - user_db_data:/var/lib/postgresql/data
+    networks:
+      - bazaar-network
+    restart: on-failure
+
+  account-db:
+    image: postgres:13.10-alpine
+    environment:
+      POSTGRES_DB: account_db
+      POSTGRES_USER: account
+      POSTGRES_PASSWORD: password
+    volumes:
+      - account_db_data:/var/lib/postgresql/data
+    networks:
+      - bazaar-network
+    restart: on-failure
+
+  transaction-db:
+    image: postgres:13.10-alpine
+    environment:
+      POSTGRES_DB: transaction_db
+      POSTGRES_USER: transaction
+      POSTGRES_PASSWORD: password
+    volumes:
+      - transaction_db_data:/var/lib/postgresql/data
+    networks:
+      - bazaar-network
+    restart: on-failure
+
+  ai-db:
+    image: postgres:13.10-alpine
+    environment:
+      POSTGRES_DB: ai_db
+      POSTGRES_USER: ai
+      POSTGRES_PASSWORD: password
+    volumes:
+      - ai_db_data:/var/lib/postgresql/data
+    networks:
+      - bazaar-network
+    restart: on-failure
+
+  notification-db:
+    image: postgres:13.10-alpine
+    environment:
+      POSTGRES_DB: notification_db
+      POSTGRES_USER: notification
+      POSTGRES_PASSWORD: password
+    volumes:
+      - notification_db_data:/var/lib/postgresql/data
+    networks:
+      - bazaar-network
+    restart: on-failure
+
+  # --- Caching & Messaging ---
+  redis:
+    image: redis:6.2.12-alpine
+    networks:
+      - bazaar-network
+    restart: on-failure
+
+  rabbitmq:
+    image: rabbitmq:3.9.13-management-alpine
+    ports:
+      - "5672:5672" # AMQP protocol port
+      - "15672:15672" # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - bazaar-network
+    restart: on-failure
+
+  # --- Microservices (Custom Applications) ---
+  # Each service assumes a Dockerfile in its respective directory: ./services/<service-name>/Dockerfile
+  # For local development, you might often mount source code for hot-reloading,
+  # but for a "production-quality" local setup, building images is more representative.
+
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080" # Expose gateway to host
+    environment:
+      # Internal service URLs for the gateway to route requests
+      USER_SERVICE_URL: http://user-service:8081
+      ACCOUNT_SERVICE_URL: http://account-service:8082
+      TRANSACTION_SERVICE_URL: http://transaction-service:8083
+      AI_RECOMMENDATION_SERVICE_URL: http://ai-recommendation-service:8084
+      NOTIFICATION_SERVICE_URL: http://notification-service:8085
+      # Add any other gateway specific environment variables (e.g., JWT secret, rate limits)
+    depends_on:
+      # Ensure core services are up before the gateway starts routing
+      user-service:
+        condition: service_started
+      account-service:
+        condition: service_started
+      transaction-service:
+        condition: service_started
+      ai-recommendation-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+    networks:
+      - bazaar-network
+    restart: on-failure
+
+  user-service:
+    build:
+      context: ./services/user-service
+      dockerfile: Dockerfile
+    # No host port mapping needed unless you want to access it directly from host for debugging
+    # ports:
+    #   - "8081:8081"
+    environment:
+      DATABASE_URL: postgres://user:password@user-db:5432/user_db
+      REDIS_HOST: redis
+      RABBITMQ_HOST: rabbitmq
+      SERVICE_PORT: 8081 # Internal port for the service
+    depends_on:
+      user-db:
+        condition: service_started
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+    networks:
+      - bazaar-network
+    restart: on-failure
+
+  account-service:
+    build:
+      context: ./services/account-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgres://account:password@account-db:5432/account_db
+      REDIS_HOST: redis
+      RABBITMQ_HOST: rabbitmq
+      SERVICE_PORT: 8082
+    depends_on:
+      account-db:
+        condition: service_started
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+    networks:
+      - bazaar-network
+    restart: on-failure
+
+  transaction-service:
+    build:
+      context: ./services/transaction-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgres://transaction:password@transaction-db:5432/transaction_db
+      REDIS_HOST: redis
+      RABBITMQ_HOST: rabbitmq
+      SERVICE_PORT: 8083
+    depends_on:
+      transaction-db:
+        condition: service_started
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+    networks:
+      - bazaar-network
+    restart: on-failure
+
+  ai-recommendation-service:
+    build:
+      context: ./services/ai-recommendation-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgres://ai:password@ai-db:5432/ai_db
+      REDIS_HOST: redis
+      RABBITMQ_HOST: rabbitmq
+      SERVICE_PORT: 8084
+      # AI-specific configurations, e.g., model paths, API keys
+      # MODEL_PATH: /app/models/my_model.pkl
+    depends_on:
+      ai-db:
+        condition: service_started
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+    networks:
+      - bazaar-network
+    restart: on-failure
+
+  notification-service:
+    build:
+      context: ./services/notification-service
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgres://notification:password@notification-db:5432/notification_db
+      REDIS_HOST: redis
+      RABBITMQ_HOST: rabbitmq
+      SERVICE_PORT: 8085
+      # SMTP_HOST: smtp.example.com
+      # SMTP_PORT: 587
+      # SMTP_USER: user@example.com
+      # SMTP_PASSWORD: password
+    depends_on:
+      notification-db:
+        condition: service_started
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+    networks:
+      - bazaar-network
+    restart: on-failure
+
+networks:
+  bazaar-network:
+    driver: bridge
+
+volumes:
+  user_db_data:
+  account_db_data:
+  transaction_db_data:
+  ai_db_data:
+  notification_db_data:
+  # Add other volumes if services need persistent storage for logs, models, etc.
+  # For example, if ai-recommendation-service stores models:
+  # ai_models:
